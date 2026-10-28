@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: azm-sumsub-ottu-demo
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 app:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_EMAIL
+        value: admin@azm.local
+      - key: HTTPS_ONLY
+        value: '1'

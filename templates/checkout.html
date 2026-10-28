@@ -1,0 +1,64 @@
+{% extends 'base.html' %}{% block content %}
+<section class="panel narrow"><span class="eyebrow">STEP 03 · OTTU HOSTED CHECKOUT — DEMO</span>
+<h1>AZM Markets · Payment</h1><p>Reference {{dep.reference}} · Mock session <code>{{dep.ottu_session}}</code></p>
+<div class="notice"><strong>Simulation only:</strong> Enter fictional card metadata below. For a saved card, use only a dummy 3- or 4-digit security code. Never enter real card credentials or photographs. In production the customer enters the full card credentials only on Ottu's real hosted payment page.</div>
+<div class="checkout"><span>Payment total</span><h1>AED {{'%.2f'|format(dep.amount)}}</h1>
+{% if dep.gateway_token %}
+<p><span class="pill green">Previously used · Sumsub verified</span></p>
+<div class="saved-choice"><strong>Visa/Mastercard · •••• •••• •••• {{dep.last4}}</strong><small>Mock saved token available · ownership approved · previous successful checkout</small></div>
+<p>The saved card number stays masked. Enter a dummy CVV/security code for this repeat payment; no fresh Sumsub image upload is required.</p>
+{% else %}
+<p><span class="pill amber">First time using this card at Ottu</span></p><p>Sumsub image evidence was approved by the demo admin. Enter dummy card metadata here for the first time. Real card-to-Sumsub binding must be implemented separately using a reliable PSP identifier; this demonstration cannot prove ownership.</p>
+{% endif %}
+</div>
+{% if dep.status=='initiated' %}
+<form method="post" action="{{url_for('checkout_simulate',deposit_id=dep.id)}}" class="panel" id="ottu-form">
+<input type="hidden" name="csrf" value="{{csrf_token()}}">
+<input type="hidden" id="checkout-mode" name="mode" value="{{'saved' if dep.gateway_token else 'new'}}">
+{% if dep.gateway_token %}
+<div class="notice"><strong>Saved verified card selected:</strong> •••• •••• •••• {{dep.last4}}. This is a mock payment-method token, not proof of a cross-PSP network token.</div>
+<div class="saved-card-details">
+  <div class="saved-card-heading">Saved card · previously used</div>
+  <div class="masked-pan" aria-label="Saved card ending in {{dep.last4}}">•••• •••• •••• {{dep.last4}}</div>
+  <div class="pill green">Sumsub verification approved</div>
+</div>
+<label>CVV / security code (dummy only)
+  <input id="saved-demo-cvv" type="password" inputmode="numeric" pattern="[0-9]{3,4}" minlength="3" maxlength="4" placeholder="•••" autocomplete="off" required aria-describedby="saved-cvv-note">
+</label>
+<input type="hidden" name="demo_cvv_entered" id="demo-cvv-entered" value="0">
+<p class="small-muted" id="saved-cvv-note">For this simulation use a made-up 3- or 4-digit code only. It is checked locally and is <strong>not submitted or stored</strong>. The Flask backend receives only a demo confirmation flag. In production, CVV entry and validation must occur exclusively in the PSP/Ottu-hosted checkout.</p>
+{% else %}
+<h2>Enter card at simulated Ottu checkout</h2>
+<label>Cardholder name (fictional)<input name="cardholder" required maxlength="100" placeholder="Ahmed Khan" autocomplete="off"></label>
+<div class="split"><label>First 6/8 digits (test only)<input name="bin_digits" maxlength="8" minlength="6" inputmode="numeric" pattern="[0-9]{6}([0-9]{2})?" placeholder="411111" required autocomplete="off"></label>
+<label>Last 4 digits (test only)<input name="last4" maxlength="4" inputmode="numeric" pattern="[0-9]{4}" required placeholder="4242" autocomplete="off"></label></div>
+<label>Expiry (dummy MM/YY)<input name="expiry" maxlength="5" pattern="(0[1-9]|1[0-2])/[0-9]{2}" placeholder="12/28" required autocomplete="off"></label>
+<p class="small-muted">In this demo the backend checks fictional name/format only and creates a synthetic token after payment success. Production requires secure PSP card identification and binding to the Sumsub check; name or masked digits alone cannot prove ownership.</p>
+{% endif %}
+<div class="actions"><button name="result" value="paid">Simulate payment success</button><button name="result" value="failed" class="outline">Simulate decline</button></div>
+</form>
+{% if dep.gateway_token %}
+<script>
+(function () {
+  const form = document.getElementById('ottu-form');
+  const cvv = document.getElementById('saved-demo-cvv');
+  const marker = document.getElementById('demo-cvv-entered');
+  if (!form || !cvv || !marker) return;
+  form.addEventListener('submit', function (event) {
+    if (!/^[0-9]{3,4}$/.test(cvv.value)) {
+      event.preventDefault();
+      cvv.setCustomValidity('Enter a dummy 3- or 4-digit code.');
+      cvv.reportValidity();
+      return;
+    }
+    cvv.setCustomValidity('');
+    marker.value = '1';
+    cvv.value = ''; // Clear before submit: never transmit security code to Flask.
+    cvv.required = false;
+  });
+  cvv.addEventListener('input', function () { cvv.setCustomValidity(''); });
+}());
+</script>
+{% endif %}
+{% else %}<div class="notice">Checkout status: {{dep.status}}</div>{% endif %}
+<p><a href="/client">← Back to client portal</a></p></section>{% endblock %}
